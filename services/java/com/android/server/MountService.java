@@ -1054,6 +1054,11 @@ class MountService extends IMountService.Stub
         // Redundant probably. But no harm in updating state again.
         mPms.updateExternalMediaStatus(false, false);
         try {
+            if (path.equals("/storage/emulated/0")) {
+                Slog.i(TAG, "Unmount /storage/emulated/0 here");
+                HCFSUnmountExternal();
+                return StorageResultCode.OperationSucceeded;
+            }
             final Command cmd = new Command("volume", "unmount", path);
             if (removeEncryption) {
                 cmd.appendArg("force_and_revert");
@@ -1417,6 +1422,18 @@ class MountService extends IMountService.Stub
                     return;
                 }
             }
+        }
+    }
+
+    private static void HCFSUnmountExternal() {
+        try {
+            java.lang.Process p = Runtime.getRuntime().exec("HCFSvol unmount hcfs_external /mnt/shell/emulated");
+            int status = p.waitFor();
+            Slog.i(TAG, "HCFS Unmount External status: " + status);
+        } catch (IOException e) {
+            Slog.e(TAG, "Error calling HCFS unmount");
+        } catch (InterruptedException e) {
+            Slog.e(TAG, "Error calling HCFS unmount");
         }
     }
 

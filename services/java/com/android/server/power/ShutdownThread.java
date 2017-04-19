@@ -47,6 +47,7 @@ import com.android.internal.telephony.ITelephony;
 
 import android.util.Log;
 import android.view.WindowManager;
+import java.io.IOException;
 
 public final class ShutdownThread extends Thread {
     // constants
@@ -263,6 +264,18 @@ public final class ShutdownThread extends Thread {
         }
     }
 
+    private static void HCFSShutdown() {
+        try {
+            java.lang.Process p = Runtime.getRuntime().exec("HCFSvol terminate");
+            int status = p.waitFor();
+            Log.i(TAG, "HCFS shutdown status: " + status);
+        } catch (IOException e) {
+            Log.e(TAG, "Error calling HCFS shutdown");
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Error calling HCFS shutdown");
+        }
+    }
+
     /**
      * Makes sure we handle the shutdown gracefully.
      * Shuts off power regardless of radio and bluetooth state if the alloted time has passed.
@@ -368,6 +381,8 @@ public final class ShutdownThread extends Thread {
                 }
             }
         }
+
+        HCFSShutdown();
 
         rebootOrShutdown(mReboot, mRebootReason);
     }
