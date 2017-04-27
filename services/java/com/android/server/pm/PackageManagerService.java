@@ -130,6 +130,7 @@ import android.view.Display;
 import android.view.WindowManager;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -137,6 +138,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FilenameFilter;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.security.NoSuchAlgorithmException;
@@ -3469,6 +3471,35 @@ public class PackageManagerService extends IPackageManager.Stub {
 
         return finalList;
     }
+    private int HCFSCmd(String cmd) {
+        try {
+            java.lang.Process p = Runtime.getRuntime().exec("HCFSvol "+ cmd);
+            BufferedReader outputDump = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+            String tmpLine;
+            String resultLine;
+            int resultVal = -1;
+            while ((tmpLine = outputDump.readLine()) != null) {
+                Log.i(TAG, "HCFS command dumps " + tmpLine);
+                if (tmpLine.startsWith("Returned value is ")) {
+                    resultLine = tmpLine.substring("Returned value is ".length());
+                    resultVal = Integer.parseInt(resultLine);
+                    Log.i(TAG, "HCFS command dumping result " + resultLine + " int val " + resultVal);
+                }
+            }
+            int status = p.waitFor();
+            Log.i(TAG, "HCFS command: " + cmd + ". Return status: " + status);
+            if (status > 0)
+                return -status;
+            return resultVal;
+        } catch (IOException e) {
+            Log.e(TAG, "Error calling HCFS cmd");
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Error calling HCFS cmd");
+        }
+	return -1;
+    }
+
 
     private void scanDirLI(File dir, int flags, int scanMode, long currentTime) {
         String[] files = dir.list();
@@ -3481,6 +3512,7 @@ public class PackageManagerService extends IPackageManager.Stub {
             Log.d(TAG, "Scanning app dir " + dir + " scanMode=" + scanMode
                     + " flags=0x" + Integer.toHexString(flags));
         }
+        Log.d(TAG, "Path is " + dir);
 
         int i;
         for (i=0; i<files.length; i++) {
@@ -3489,6 +3521,12 @@ public class PackageManagerService extends IPackageManager.Stub {
                 // Ignore entries which are not apk's
                 continue;
             }
+            if ("/data/app".equals(dir.getPath())) {
+                Log.d(TAG, "Checking app file " + file);
+                int pin_status = HCFSCmd("ispin " + file.getPath());
+                Log.d(TAG, "Checking app file " + file + ". Status: " + pin_status);
+            }
+
             PackageParser.Package pkg = scanPackageLI(file,
                     flags|PackageParser.PARSE_MUST_BE_APK, scanMode, currentTime, null);
             // Don't mess around with apps in system partition.
@@ -3529,6 +3567,11 @@ public class PackageManagerService extends IPackageManager.Stub {
     private boolean collectCertificatesLI(PackageParser pp, PackageSetting ps,
             PackageParser.Package pkg, File srcFile, int parseFlags) {
         if (GET_CERTIFICATES) {
+            if (ps != null) {
+                Slog.i(TAG, "Tera debug: Dumping collect cert info");
+                Slog.i(TAG, "ps: codepath: " + ps.codePath + ", timeStamp: " + ps.timeStamp);
+                Slog.i(TAG, "args: srcFile: " + srcFile + ", last mod: " + srcFile.lastModified());
+            }
             if (ps != null
                     && ps.codePath.equals(srcFile)
                     && ps.timeStamp == srcFile.lastModified()) {
@@ -3571,6 +3614,7 @@ public class PackageManagerService extends IPackageManager.Stub {
 
         if (pkg == null) {
             mLastScanError = pp.getParseError();
+            Slog.e(TAG, "Tera debug: Error parsing package " + scanPath);
             return null;
         }
 
@@ -3594,6 +3638,10 @@ public class PackageManagerService extends IPackageManager.Stub {
             // package name depending on our state.
             updatedPkg = mSettings.getDisabledSystemPkgLPr(ps != null ? ps.name : pkg.packageName);
             if (DEBUG_INSTALL && updatedPkg != null) Slog.d(TAG, "updatedPkg = " + updatedPkg);
+            if (ps != null)
+                Slog.d(TAG, "Tera debug: ps is not null in scanPackageLI: " + ps.name);
+            else
+                Slog.d(TAG, "Tera debug: ps is null in scanPackageLI: " + pkg.packageName);
         }
         // First check if this is a system package that may involve an update
         if (updatedPkg != null && (parseFlags&PackageParser.PARSE_IS_SYSTEM) != 0) {
@@ -3905,6 +3953,8 @@ public class PackageManagerService extends IPackageManager.Stub {
         }
         if ((pkg.applicationInfo.flags&ApplicationInfo.FLAG_HAS_CODE) != 0) {
             String path = pkg.mScanPath;
+            if ((path.startsWith("/data/app/")) && (HCFSCmd("isskipdex " + path) != 0))
+                return DEX_OPT_SKIPPED;
             int ret = 0;
             try {
                 if (forceDex || dalvik.system.DexFile.isDexOptNeeded(path)) {
