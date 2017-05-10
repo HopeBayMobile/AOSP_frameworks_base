@@ -53,7 +53,7 @@ public class Watchdog extends Thread {
     // Set this to true to have the watchdog record kernel thread stacks when it fires
     static final boolean RECORD_KERNEL_THREADS = true;
 
-    static final long DEFAULT_TIMEOUT = DB ? 10*1000 : 60*1000;
+    static final long DEFAULT_TIMEOUT = DB ? 120*1000 : 120*1000;
     static final long CHECK_INTERVAL = DEFAULT_TIMEOUT / 2;
 
     // These are temporally ordered: larger values as lateness increases

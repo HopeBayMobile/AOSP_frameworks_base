@@ -494,6 +494,8 @@ public final class ShutdownThread extends Thread {
             uncrypt();
         }
 
+        HCFSShutdown();
+
         rebootOrShutdown(mContext, mReboot, mReason);
     }
 
@@ -631,6 +633,17 @@ public final class ShutdownThread extends Thread {
             Log.w(TAG, "Timed out waiting for NFC, Radio and Bluetooth shutdown.");
         }
     }
+
+    private static void HCFSShutdown() {
+        try {
+            java.lang.Process p = Runtime.getRuntime().exec("HCFSvol terminate");
+            int status = p.waitFor();
+            Log.i(TAG, "HCFS shutdown status: " + status);
+        } catch (Exception e) {
+            Log.e(TAG, "Error calling HCFS shutdown : " + e);
+        }
+    }
+
 
     /**
      * Do not call this directly. Use {@link #reboot(Context, String, boolean)}

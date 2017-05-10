@@ -1772,11 +1772,31 @@ class MountService extends IMountService.Stub
             }
         }
 
+        if (HCFSUnmountExternal(vol.path)) {
+            return;
+        }
+
         try {
             mConnector.execute("volume", "unmount", vol.id);
         } catch (NativeDaemonConnectorException e) {
             throw e.rethrowAsParcelableException();
         }
+    }
+
+    private static boolean HCFSUnmountExternal(String path) {
+        if (!"/storage/emulated/0".equals(path))
+            return false;
+
+        try {
+            java.lang.Process p = Runtime.getRuntime().exec(
+                    "HCFSvol unmount hcfs_external /mnt/shell/emulated");
+            int status = p.waitFor();
+            Slog.i(TAG, "HCFS Unmount External status: " + status);
+        } catch (Exception e) {
+            Slog.e(TAG, "Error calling HCFS unmount : " + e);
+        }
+
+        return true;
     }
 
     @Override
