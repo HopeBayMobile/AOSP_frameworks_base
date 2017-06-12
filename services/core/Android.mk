@@ -1,7 +1,10 @@
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
+LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := teraapi:libs/terafonnapi.jar
+include $(BUILD_MULTI_PREBUILT)
 
+include $(CLEAR_VARS)
 LOCAL_MODULE := services.core
 
 LOCAL_AIDL_INCLUDES := system/netd/server/binder
@@ -19,6 +22,7 @@ LOCAL_AIDL_INCLUDES += \
 
 LOCAL_JAVA_LIBRARIES := services.net telephony-common
 LOCAL_STATIC_JAVA_LIBRARIES := tzdata_update
+LOCAL_STATIC_JAVA_LIBRARIES += teraapi
 LOCAL_PROTOC_OPTIMIZE_TYPE := nano
 
 ifneq ($(INCREMENTAL_BUILDS),)

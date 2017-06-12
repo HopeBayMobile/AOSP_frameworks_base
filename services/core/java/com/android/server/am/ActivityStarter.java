@@ -113,6 +113,7 @@ import android.util.EventLog;
 import android.util.Slog;
 import android.view.Display;
 
+import com.android.server.HCFS.HCFSCommunicator; /* For hcfs */
 import com.android.internal.app.HeavyWeightSwitcherActivity;
 import com.android.internal.app.IVoiceInteractor;
 import com.android.server.am.ActivityStackSupervisor.PendingActivityLaunch;
@@ -179,6 +180,7 @@ class ActivityStarter {
     private boolean mKeepCurTransition;
     private boolean mAvoidMoveToFront;
     private boolean mPowerHintSent;
+    private HCFSCommunicator mHCFSComm = null;
 
     private IVoiceInteractionSession mVoiceSession;
     private IVoiceInteractor mVoiceInteractor;
@@ -364,7 +366,59 @@ class ActivityStarter {
 
         final ActivityStack resultStack = resultRecord == null ? null : resultRecord.task.stack;
 
-        if (err != START_SUCCESS) {
+        // TODO: add here
+        if (mHCFSComm == null) {
+                synchronized (this) {
+                        if (mHCFSComm == null) {
+                                mHCFSComm = new HCFSCommunicator(mService.mContext);
+                                Slog.w(TAG, "HCFSCommunicator is created.");
+                        }
+                }
+        }
+
+        boolean appAvailable = true;
+        if (!intent.getBooleanExtra("skip_available_check", false) &&
+                err == ActivityManager.START_SUCCESS &&
+                (aInfo.applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) == 0) {
+            int isAppAvail = mHCFSComm.isAppAvailable(aInfo.applicationInfo.packageName);
+
+            if (isAppAvail == HCFSCommunicator.AppAvailableStatus.UNAVAILABLE) {
+                /* Not allow to open the app if apk is on cloud */
+                PackageManager p = mService.mContext.getPackageManager();
+                final String appName = p.getApplicationLabel(aInfo.applicationInfo).toString();
+                /* Check if app is local */
+                mService.mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                        android.widget.Toast.makeText(mService.mContext, appName +
+                            " is on cloud.", android.widget.Toast.LENGTH_SHORT)
+                            .show();
+                        }
+                });
+                appAvailable = false;
+
+            } else if (isAppAvail == HCFSCommunicator.AppAvailableStatus.PARTIAL_AVAILABLE) {
+                /* Create dialog when app data is partially local */
+                intent.putExtra("skip_available_check", true);
+                PendingIntent pendingIntent = PendingIntent.getActivity(mService.mContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+                Intent allowAppEnableDialogIntent = new Intent();
+                allowAppEnableDialogIntent.putExtra("orIntent", pendingIntent);
+                allowAppEnableDialogIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                allowAppEnableDialogIntent.setClassName(
+                    "com.hopebaytech.hcfsmgmt",
+                    "com.hopebaytech.hcfsmgmt.utils.AppAvailableAlertActivity");
+
+                mService.mContext.startActivity(allowAppEnableDialogIntent);
+                appAvailable = false;
+
+            } else {
+                /* Great! App is available. */
+                appAvailable = true;
+            }
+        }
+
+        if (err != START_SUCCESS || !appAvailable) {
             if (resultRecord != null) {
                 resultStack.sendActivityResultLocked(
                         -1, resultRecord, resultWho, requestCode, RESULT_CANCELED, null);
