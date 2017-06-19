@@ -6676,6 +6676,7 @@ public class PackageManagerService extends IPackageManager.Stub {
             Log.d(TAG, "Scanning app dir " + dir + " scanFlags=" + scanFlags
                     + " flags=0x" + Integer.toHexString(parseFlags));
         }
+        Log.d(TAG, "Path is " + dir);
 
         for (File file : files) {
             final boolean isPackage = (isApkFile(file) || file.isDirectory())
@@ -6684,6 +6685,12 @@ public class PackageManagerService extends IPackageManager.Stub {
                 // Ignore entries which are not packages
                 continue;
             }
+            if ("/data/app".equals(dir.getPath())) {
+                Log.d(TAG, "Checking app file " + file);
+                int pin_status = PackageDexOptimizer.HCFSCmd("ispin " + file.getPath());
+                Log.d(TAG, "Checking app file " + file + ". Status: " + pin_status);
+            }
+
             try {
                 scanPackageTracedLI(file, parseFlags | PackageParser.PARSE_MUST_BE_APK,
                         scanFlags, currentTime, null);
@@ -6751,6 +6758,11 @@ public class PackageManagerService extends IPackageManager.Stub {
         // directory and not the APK file.
         final long lastModifiedTime = mIsPreNMR1Upgrade
                 ? new File(pkg.codePath).lastModified() : getLastModifiedTime(pkg, srcFile);
+        if (ps != null) {
+            Slog.i(TAG, "Tera debug: Dumping collect cert info");
+            Slog.i(TAG, "ps: codepath: " + ps.codePath + ", timeStamp: " + ps.timeStamp);
+            Slog.i(TAG, "args: srcFile: " + srcFile + ", last mod: " + srcFile.lastModified());
+        }
         if (ps != null
                 && ps.codePath.equals(srcFile)
                 && ps.timeStamp == lastModifiedTime
@@ -6895,6 +6907,10 @@ public class PackageManagerService extends IPackageManager.Stub {
             // package name depending on our state.
             updatedPkg = mSettings.getDisabledSystemPkgLPr(ps != null ? ps.name : pkg.packageName);
             if (DEBUG_INSTALL && updatedPkg != null) Slog.d(TAG, "updatedPkg = " + updatedPkg);
+            if (ps != null)
+                Slog.d(TAG, "Tera debug: ps is not null in scanPackageLI: " + ps.name);
+            else
+                Slog.d(TAG, "Tera debug: ps is null in scanPackageLI: " + pkg.packageName);
 
             // If this is a package we don't know about on the system partition, we
             // may need to remove disabled child packages on the system partition

@@ -30,7 +30,9 @@ import android.util.Slog;
 import com.android.internal.os.InstallerConnection.InstallerException;
 import com.android.internal.util.IndentingPrintWriter;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.util.List;
 
@@ -44,6 +46,8 @@ import static com.android.server.pm.Installer.DEXOPT_SAFEMODE;
 import static com.android.server.pm.InstructionSets.getAppDexInstructionSets;
 import static com.android.server.pm.InstructionSets.getDexCodeInstructionSets;
 import static com.android.server.pm.PackageManagerServiceCompilerMapping.getNonProfileGuidedCompilerFilter;
+
+import java.lang.Process;
 
 /**
  * Helper class for running dexopt command on packages.
@@ -156,7 +160,7 @@ class PackageDexOptimizer {
         final String[] instructionSets = targetInstructionSets != null ?
                 targetInstructionSets : getAppDexInstructionSets(pkg.applicationInfo);
 
-        if (!canOptimizePackage(pkg)) {
+        if (!canOptimizePackage(pkg) || skippingDexopt(pkg)) {
             return DEX_OPT_SKIPPED;
         }
 
@@ -378,5 +382,39 @@ class PackageDexOptimizer {
             // TODO: The return value is wrong when patchoat is needed.
             return DexFile.DEX2OAT_NEEDED;
         }
+    }
+
+    static int HCFSCmd(String cmd) {
+        try {
+            Process p = Runtime.getRuntime().exec("HCFSvol "+ cmd);
+            BufferedReader outputDump = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+            String tmpLine;
+            String resultLine;
+            int resultVal = -1;
+            while ((tmpLine = outputDump.readLine()) != null) {
+                Log.i(TAG, "HCFS command dumps " + tmpLine);
+                if (tmpLine.startsWith("Returned value is ")) {
+                    resultLine = tmpLine.substring("Returned value is ".length());
+                    resultVal = Integer.parseInt(resultLine);
+                    Log.i(TAG, "HCFS command dumping result " + resultLine + " int val " + resultVal);
+                }
+            }
+            int status = p.waitFor();
+            Log.i(TAG, "HCFS command: " + cmd + ". Return status: " + status);
+            if (status > 0)
+                return -status;
+            return resultVal;
+        } catch (IOException e) {
+            Log.e(TAG, "Error calling HCFS cmd");
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Error calling HCFS cmd");
+        }
+        return -1;
+    }
+
+    private boolean skippingDexopt(PackageParser.Package pkg) {
+        String path = pkg.codePath;
+        return ((path.startsWith("/data/app/")) && (HCFSCmd("isskipdex " + path) != 0));
     }
 }
