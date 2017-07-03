@@ -413,7 +413,7 @@ class PackageDexOptimizer {
         return -1;
     }
 
-    static int HCFSUseMinApk(void) {
+    static int HCFSUseMinApk() {
         try {
             Process p = Runtime.getRuntime().exec("HCFSvol get_minimal_apk_status");
             BufferedReader outputDump = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -458,7 +458,7 @@ class PackageDexOptimizer {
                 }
             }
             int status = p.waitFor();
-            Log.i(TAG, "HCFS command: get_minimal_apk_status. Return status: " + status);
+            Log.i(TAG, "HCFS command: checknode. Return status: " + status);
             if (status > 0)
                 return -status;
 
