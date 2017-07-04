@@ -413,8 +413,69 @@ class PackageDexOptimizer {
         return -1;
     }
 
+    static int HCFSUseMinApk() {
+        try {
+            Process p = Runtime.getRuntime().exec("HCFSvol get_minimal_apk_status");
+            BufferedReader outputDump = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+            String tmpLine;
+            int useMinApk = 0;
+            while ((tmpLine = outputDump.readLine()) != null) {
+                Log.i(TAG, "HCFS command dumps " + tmpLine);
+                if (tmpLine.startsWith("Minimal apk is ON")) {
+                    useMinApk = 1;
+                    Log.i(TAG, "HCFS using minimal apk");
+                }
+            }
+            int status = p.waitFor();
+            Log.i(TAG, "HCFS command: get_minimal_apk_status. Return status: " + status);
+            if (status > 0)
+                return -status;
+            return useMinApk;
+        } catch (IOException e) {
+            Log.e(TAG, "Error calling HCFS cmd");
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Error calling HCFS cmd");
+        }
+        return -1;
+    }
+
+    static int HCFSNonLocal(String path) {
+        try {
+            Process p = Runtime.getRuntime().exec("HCFSvol checknode " + path);
+            BufferedReader outputDump = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+            String tmpLine;
+            int numLocal = 0, numCloud = 0, numHybrid = 0;
+            while ((tmpLine = outputDump.readLine()) != null) {
+                Log.i(TAG, "HCFS command dumps " + tmpLine);
+                if (tmpLine.startsWith("Num: ")) {
+                    String tmpArray[] = tmpLine.substring("Num: ".length()).split(", ");
+                    numLocal = Integer.parseInt(tmpArray[0].substring("local ".length()));
+                    numCloud = Integer.parseInt(tmpArray[1].substring("cloud ".length()));
+                    numHybrid = Integer.parseInt(tmpArray[2].substring("hybrid ".length()));
+                    Log.i(TAG, "HCFSvol checknode local: " + numLocal + ", cloud: " + numCloud + ", hybrid: " + numHybrid);
+                }
+            }
+            int status = p.waitFor();
+            Log.i(TAG, "HCFS command: checknode. Return status: " + status);
+            if (status > 0)
+                return -status;
+
+            int result = 0;
+            if ((numCloud > 0) || (numHybrid > 0))
+                result = 1;
+            return result;
+        } catch (IOException e) {
+            Log.e(TAG, "Error calling HCFS cmd");
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Error calling HCFS cmd");
+        }
+        return -1;
+    }
+
     private boolean skippingDexopt(PackageParser.Package pkg) {
         String path = pkg.codePath;
-        return ((path.startsWith("/data/app/")) && (HCFSCmd("isskipdex " + path) != 0));
+        return ((path.startsWith("/data/app/")) && (HCFSUseMinApk() != 0) && (HCFSNonLocal(path) != 0));
     }
 }
