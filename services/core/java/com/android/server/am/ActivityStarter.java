@@ -377,7 +377,7 @@ class ActivityStarter {
         }
 
         boolean appAvailable = true;
-        if (!intent.getBooleanExtra("skip_available_check", false) &&
+        if (!intent.hasCategory("skip_available_check") &&
                 err == ActivityManager.START_SUCCESS &&
                 (aInfo.applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) == 0) {
             int isAppAvail = mHCFSComm.isAppAvailable(aInfo.applicationInfo.packageName);
@@ -399,7 +399,7 @@ class ActivityStarter {
 
             } else if (isAppAvail == HCFSCommunicator.AppAvailableStatus.PARTIAL_AVAILABLE) {
                 /* Create dialog when app data is partially local */
-                intent.putExtra("skip_available_check", true);
+                intent.addCategory("skip_available_check");
                 PendingIntent pendingIntent = PendingIntent.getActivity(mService.mContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
 
                 Intent allowAppEnableDialogIntent = new Intent();
