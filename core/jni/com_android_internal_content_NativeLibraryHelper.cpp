@@ -107,6 +107,10 @@ static bool
 isFileDifferent(const char* filePath, uint32_t fileSize, time_t modifiedTime,
         uint32_t zipCrc, struct stat64* st)
 {
+    if (fileSize == 0) {
+        return false;
+    }
+
     if (lstat64(filePath, st) < 0) {
         // File is not found or cannot be read.
         ALOGV("Couldn't stat %s, copying: %s\n", filePath, strerror(errno));
