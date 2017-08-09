@@ -22,7 +22,6 @@
     coreApp="true">
 
     <application android:label="@string/app_name"
-        android:defaultToDeviceProtectedStorage="true"
         android:directBootAware="true">
 
         <library android:name="android.ext.services"/>
