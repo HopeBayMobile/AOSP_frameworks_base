@@ -29,7 +29,6 @@
     <application
             android:label="@string/app_label"
             android:process="system"
-            android:defaultToDeviceProtectedStorage="true"
             android:directBootAware="true">
 
         <uses-library android:name="com.android.location.provider" />

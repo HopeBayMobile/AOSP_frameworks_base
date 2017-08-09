@@ -118,7 +118,6 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application android:label="@string/app_label"
-                 android:defaultToDeviceProtectedStorage="true"
                  android:directBootAware="true">
         <provider
             android:name="android.support.v4.content.FileProvider"

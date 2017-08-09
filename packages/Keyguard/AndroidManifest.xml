@@ -46,7 +46,6 @@
         android:process="com.android.systemui"
         android:persistent="true"
         android:supportsRtl="true"
-        android:defaultToDeviceProtectedStorage="true"
         android:directBootAware="true">
 
     </application>

@@ -22,7 +22,6 @@
 
     <application android:label="@string/app_name"
         android:allowBackup="false"
-        android:defaultToDeviceProtectedStorage="true"
         android:directBootAware="true">
 
         <library android:name="android.ext.shared"/>
