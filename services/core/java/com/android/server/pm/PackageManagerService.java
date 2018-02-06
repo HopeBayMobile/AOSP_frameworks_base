@@ -9310,12 +9310,15 @@ public class PackageManagerService extends IPackageManager.Stub {
                     if (ps.pkg != null && ps.pkg.applicationInfo != null &&
                             !TextUtils.equals(adjustedAbi, ps.pkg.applicationInfo.primaryCpuAbi)) {
                         ps.pkg.applicationInfo.primaryCpuAbi = adjustedAbi;
-                        Slog.i(TAG, "Adjusting ABI for " + ps.name + " to " + adjustedAbi
-                                + " (requirer="
-                                + (requirer == null ? "null" : requirer.pkg.packageName)
-                                + ", scannedPackage="
-                                + (scannedPackage != null ? scannedPackage.packageName : "null")
-                                + ")");
+                        if (requirer.pkg == null) {
+                            Slog.w(TAG, "Adjusting ABI error, requirer.pkg should not be null");
+                        } else {
+                            Slog.i(TAG, "Adjusting ABI for " + ps.name + " to " + adjustedAbi
+                                    + " (requirer=" + (requirer == null ? "null" : requirer.pkg.packageName)
+                                    + ", scannedPackage="
+                                    + (scannedPackage != null ? scannedPackage.packageName : "null")
+                                    + ")");
+                        }
                         try {
                             mInstaller.rmdex(ps.codePathString,
                                     getDexCodeInstructionSet(getPreferredInstructionSet()));
